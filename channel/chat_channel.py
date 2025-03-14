@@ -228,6 +228,9 @@ class ChatChannel(Channel):
                     "path": context.content,
                     "msg": context.get("msg")
                 }
+                img_cache = memory.USER_IMAGE_CACHE.get(context["session_id"])
+                if context.type == ContextType.IMAGE:
+                    reply = self.build_reply_content(img_cache,context)
             elif context.type == ContextType.ACCEPT_FRIEND:  # 好友申请，匹配字符串
                 reply = self._build_friend_request_reply(context)
             elif context.type == ContextType.SHARING:  # 分享信息，当前无默认逻辑
@@ -366,6 +369,9 @@ class ChatChannel(Channel):
                 if semaphore.acquire(blocking=False):  # 等线程处理完毕才能删除
                     if not context_queue.empty():
                         context = context_queue.get()
+                        print("======================================================")
+                        print(context)
+                        print("======================================================")
                         logger.debug("[chat_channel] consume context: {}".format(context))
                         future: Future = handler_pool.submit(self._handle, context)
                         future.add_done_callback(self._thread_pool_callback(session_id, context=context))

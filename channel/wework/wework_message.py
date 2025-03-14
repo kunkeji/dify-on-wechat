@@ -105,6 +105,7 @@ def c2c_download_and_convert(wework, message, file_name):
 class WeworkMessage(ChatMessage):
     def __init__(self, wework_msg, wework, is_group=False):
         try:
+
             super().__init__(wework_msg)
             self.msg_id = wework_msg['data'].get('conversation_id', wework_msg['data'].get('room_conversation_id'))
             # 使用.get()防止 'send_time' 键不存在时抛出错误

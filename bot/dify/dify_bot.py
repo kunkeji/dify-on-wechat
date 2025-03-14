@@ -19,6 +19,8 @@ from common import const, memory
 from common.utils import parse_markdown_text, print_red
 from common.tmp_dir import TmpDir
 from config import conf
+import base64
+
 
 UNKNOWN_ERROR_MSG = "我暂时遇到了一些问题，请您稍后重试~"
 
@@ -28,6 +30,7 @@ class DifyBot(Bot):
         self.sessions = DifySessionManager(DifySession, model=conf().get("model", const.DIFY))
 
     def reply(self, query, context: Context=None):
+        print(context)
         # acquire reply content
         if context.type == ContextType.TEXT or context.type == ContextType.IMAGE_CREATE:
             if context.type == ContextType.IMAGE_CREATE:
@@ -72,7 +75,64 @@ class DifyBot(Bot):
                 reply = Reply(ReplyType.TEXT, error_msg)
             return reply
         else:
-            reply = Reply(ReplyType.ERROR, "Bot不支持处理{}类型的消息".format(context.type))
+            logger.info("[DIFY] context.type={}".format(context.type))
+            # reply = Reply(ReplyType.ERROR, "Bot不支持处理{}类型的消息".format(context.type))
+            # 首先把图片转成base64
+            if context.type == ContextType.IMAGE:
+                try:
+                    print("开始处理图片消息...")
+                    print("图片路径:", context.content)
+                    if not os.path.exists(context.content):
+                        print("图片文件不存在，跳过处理")
+                        return Reply(ReplyType.TEXT, "抱歉，图片文件不存在或已被清理，请重新发送图片。")
+                    with open(context.content, 'rb') as f:
+                        image_bytes = f.read()
+                        image_b64 = base64.b64encode(image_bytes).decode('ascii')
+                    query = f"base64:{image_b64}"
+                except Exception as e:
+                    print("处理图片时发生错误:", str(e))
+                    return Reply(ReplyType.TEXT, "处理图片时发生错误，请重试。")
+            else:
+                query = context.content
+            
+            logger.info("[DIFY] query={}".format(query))
+            session_id = context["session_id"]
+            # TODO: 适配除微信以外的其他channel
+            channel_type = conf().get("channel_type", "wx")
+            user = None
+            if channel_type in ["wx", "wework", "gewechat"]:
+                user = context["msg"].other_user_nickname if context.get("msg") else "default"
+            elif channel_type in ["wechatcom_app", "wechatmp", "wechatmp_service", "wechatcom_service", "web"]:
+                user = context["msg"].other_user_id if context.get("msg") else "default"
+            else:
+                return Reply(ReplyType.ERROR, f"unsupported channel type: {channel_type}, now dify only support wx, wechatcom_app, wechatmp, wechatmp_service channel")
+            logger.debug(f"[DIFY] dify_user={user}")
+            user = user if user else "default" # 防止用户名为None，当被邀请进的群未设置群名称时用户名为None
+            session = self.sessions.get_session(session_id, user)
+            if context.get("isgroup", False):
+                # 群聊：根据是否是共享会话群来决定是否设置用户信息
+                if not context.get("is_shared_session_group", False):
+                    # 非共享会话群：设置发送者信息
+                    session.set_user_info(context["msg"].actual_user_id, context["msg"].actual_user_nickname)
+                else:
+                    # 共享会话群：不设置用户信息
+                    session.set_user_info('', '')
+                # 设置群聊信息
+                session.set_room_info(context["msg"].other_user_id, context["msg"].other_user_nickname)
+            else:
+                # 私聊：使用发送者信息作为用户信息，房间信息留空
+                session.set_user_info(context["msg"].other_user_id, context["msg"].other_user_nickname)
+                session.set_room_info('', '')
+
+            # 打印设置的session信息
+            logger.debug(f"[DIFY] Session user and room info - user_id: {session.get_user_id()}, user_name: {session.get_user_name()}, room_id: {session.get_room_id()}, room_name: {session.get_room_name()}")
+            logger.debug(f"[DIFY] session={session} query={query}")
+
+            reply, err = self._reply(query, session, context)
+            if err != None:
+                dify_error_reply = conf().get("dify_error_reply", None)
+                error_msg = dify_error_reply if dify_error_reply else err
+                reply = Reply(ReplyType.TEXT, error_msg)
             return reply
 
     # TODO: delete this function
