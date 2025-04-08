@@ -1,0 +1,20 @@
+{
+    "always_reply_voice": false,
+    "channel_type": "wework",
+    "dify_api_base": "http://dify.zuizhenshi.cn/v1",
+    "dify_api_key": "app-H27my0idRRTyDvMVV0Q24SC2",
+    "dify_app_type": "chatflow",
+    "dify_conversation_max_messages": 0,
+    "group_chat_prefix": ["@AI小助手"],
+    "group_name_white_list": ["ALL_GROUP"],
+    "group_speech_recognition": true,
+    "image_recognition": true,
+    "model": "dify",
+    "single_chat_prefix": [""],
+    "single_chat_reply_prefix": "",
+    "speech_recognition": true,
+    "text_to_voice": "dify",
+    "voice_reply_voice": false,
+    "voice_to_text": "dify",
+    "debug": true
+}
