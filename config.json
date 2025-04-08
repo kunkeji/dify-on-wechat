@@ -2,7 +2,7 @@
     "always_reply_voice": false,
     "channel_type": "wework",
     "dify_api_base": "http://dify.zuizhenshi.cn/v1",
-    "dify_api_key": "app-H27my0idRRTyDvMVV0Q24SC2",
+    "dify_api_key": "app-zwZhgjUvLuypwGN7z3L0IuOp",
     "dify_app_type": "chatflow",
     "dify_conversation_max_messages": 0,
     "group_chat_prefix": ["@AI小助手"],
